@@ -1,0 +1,17 @@
+{
+  
+    "source_dir": "./test_source",
+    "target_dir": "./test_target",
+    "sync_interval_secs": 5,
+    "exclude_patterns": [".tmp$", ".swp$", "~$"],
+    "log": {
+        "level": "INFO",
+        "file_path": "./logs/file_sync.log",
+        "max_size_mb": 10,
+        "backup_count": 3
+    },
+    "retry": {
+        "max_attempts": 3,
+        "base_delay_ms": 1000
+    }
+}
