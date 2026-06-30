@@ -22,10 +22,20 @@
 
 #ifndef LOGGER_H
 #define LOGGER_H
+#include<string>
+enum LogLevel{DEBUG=0,INFO=1,ERROR=2};
 class Logger{
+private:
+const std::string& file_path; 
+LogLevel level;
 
+public:
+  Logger(const std::string& file_path,LogLevel level = LogLevel::INFO);
+  void log(LogLevel level, const std::string& message);
+   void debug(const std::string& msg);
+   void info(const std::string& msg);
+    void error(const std::string& msg);
 };
 
 
 #endif // LOGGER_H
-// ... 枚举和类声明 ...

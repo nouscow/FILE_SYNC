@@ -14,4 +14,19 @@
  */
 
 #include "logger.h"
-// ... 实现 ...
+   Logger::Logger(const std::string& file_path, LogLevel level = LogLevel::INFO):file_path(file_path),level(level){
+
+
+   }
+  void Logger::log(LogLevel level, const std::string& message){
+
+  }
+   void Logger::debug(const std::string& msg){
+
+   }
+   void Logger::info(const std::string& msg){
+
+   }
+    void Logger::error(const std::string& msg){
+
+    }

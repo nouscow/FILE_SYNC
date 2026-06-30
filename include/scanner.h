@@ -18,10 +18,15 @@
 
 #ifndef SCANNER_H
 #define SCANNER_H
-class Scanner{
+#include<string>
 
+class Scanner{
+   
+};
+struct FileInfo{
+  const std::string path;//相对路径
+  std::string last_change_time;//最后修改时间
+  int file_size;//文件大小
 };
 
-
 #endif // SCANNER_H
-// ... 结构体和类声明 ...

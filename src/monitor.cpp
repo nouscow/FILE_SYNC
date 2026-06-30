@@ -15,4 +15,9 @@
  */
 
 #include "monitor.h"
-// ... 实现 ...
+Monitor::Monitor(int interval_secs, SyncCallback callback):interval_secs(interval_secs){
+
+}
+void Monitor::start() {}  // 启动后台线程
+void Monitor::stop(){} // 请求停止
+bool Monitor::is_running() const{}

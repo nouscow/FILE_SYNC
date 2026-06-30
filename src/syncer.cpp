@@ -14,4 +14,12 @@
  */
 
 #include "syncer.h"
-// ... 实现 ...
+   Syncer::Syncer(const std::string& source_dir, const std::string& target_dir){
+    
+   }
+    bool Syncer::sync_file(const FileInfo& file){
+
+    }
+    bool Syncer::delete_file(const std::string& relative_path){
+
+    }

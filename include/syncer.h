@@ -19,8 +19,16 @@
 
 #ifndef SYNCER_H
 #define SYNCER_H
+#include<string>
+#include"scanner.h"
 class Syncer{
-
+  private:
+    const std::string source_dir;
+    const std::string target_dir;
+  public:
+    Syncer(const std::string& source_dir, const std::string& target_dir);
+    bool sync_file(const FileInfo& file);
+    bool delete_file(const std::string& relative_path);
 };
 
 

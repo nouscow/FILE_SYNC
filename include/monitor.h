@@ -21,8 +21,15 @@
 
 #ifndef MONITOR_H
 #define MONITOR_H
+#include<functional>
 class Monitor{
-
+    int interval_secs;
+public:
+using SyncCallback=std::function<void()>;
+Monitor(int interval_secs, SyncCallback callback);
+void start() ;  // 启动后台线程
+void stop()  ;  // 请求停止
+bool is_running() const;
 };
 
 
