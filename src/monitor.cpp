@@ -15,9 +15,26 @@
  */
 
 #include "monitor.h"
-Monitor::Monitor(int interval_secs, SyncCallback callback):interval_secs(interval_secs){
+#include<thread>
+Monitor::Monitor(int interval_secs, SyncCallback callback):interval_secs(interval_secs),callback(std::move(callback)),running_(false){
 
 }
-void Monitor::start() {}  // 启动后台线程
-void Monitor::stop(){} // 请求停止
-bool Monitor::is_running() const{}
+void Monitor::start() {
+	if (running_)return;
+	running_ = true;
+	worker_ = std::thread(&Monitor::loop,this);
+}  // 启动后台线程
+void Monitor::stop(){
+	running_ = false;
+	if (worker_.joinable()) {
+		worker_.join();
+	}
+} // 请求停止
+void Monitor::loop() {
+	while (running_) {
+		std::this_thread::sleep_for(std::chrono::seconds(this->interval_secs));
+		if (running_ && callback) {
+			callback();
+		}
+	}
+}

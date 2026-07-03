@@ -33,4 +33,3 @@ class Syncer{
 
 
 #endif // SYNCER_H
-// ... 类声明 ...

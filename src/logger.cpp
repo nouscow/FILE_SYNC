@@ -14,19 +14,56 @@
  */
 
 #include "logger.h"
-   Logger::Logger(const std::string& file_path, LogLevel level = LogLevel::INFO):file_path(file_path),level(level){
+#include<fstream>
+#include<iostream>
+#include <ctime>
+#include <chrono>
+#include <sstream>
+#include <iomanip>
+Logger::Logger(std::string file_path, LogLevel level) :file_path(file_path), level(level) {
 
-
+       file_.open(file_path,std::ios::app);
+      if(!file_){
+         std::cout<<"LOGGER OPEN ERROR"<<std::endl;
+      }
+      
    }
   void Logger::log(LogLevel level, const std::string& message){
+      if (level < this->level)return;
+      std::lock_guard<std::mutex>lock(mutex_);
+      if (file_.is_open()) {
+          file_ << level << message << std::endl;
+          file_.flush();
+      }
 
   }
-   void Logger::debug(const std::string& msg){
+  std::string Logger::get_timestamp() {
+      // 获取当前系统时间点
+      auto now = std::chrono::system_clock::now();
+      std::time_t now_c = std::chrono::system_clock::to_time_t(now);
 
+      // 转换为本地时间（线程安全版本）
+      std::tm bt;
+#if defined(_WIN32) || defined(_WIN64)
+      localtime_s(&bt, &now_c);
+#else
+      localtime_r(&now_c, &bt);
+#endif
+
+      // 格式化为字符串
+      std::ostringstream oss;
+      oss << std::put_time(&bt, "%Y-%m-%d %H:%M:%S");
+      return oss.str();
+  }
+   void Logger::debug(const std::string& msg){
+       log(LogLevel::DEBUG, msg);
    }
    void Logger::info(const std::string& msg){
-
+       log(LogLevel::INFO, msg);
    }
     void Logger::error(const std::string& msg){
-
+        log(LogLevel::ERROR, msg);
+    }
+    Logger::~Logger(){
+      file_.close();
     }

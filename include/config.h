@@ -14,7 +14,7 @@
 
 #ifndef CONFIG_H
 
-#define CONFIG_
+#define CONFIG_H
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
@@ -31,9 +31,10 @@ struct Config{
 
     // 重试配置
     int max_retries = 3;                    // 最大重试次数，默认 3 次
-    int retry_delay_secs = 2;               // 重试间隔，单位秒，默认 2 秒
+    int retry_delay_secs = 2;    // 重试间隔，单位秒，默认 2 秒
 };
 Config load_config(const std::string& path);
+void ConfigPrintf(const Config&config);
 #endif // CONFIG_H
 /**
  * ================================================================

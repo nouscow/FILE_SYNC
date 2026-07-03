@@ -14,12 +14,28 @@
  */
 
 #include "syncer.h"
-   Syncer::Syncer(const std::string& source_dir, const std::string& target_dir){
+#include <filesystem>
+#include <fstream>
+   Syncer::Syncer(const std::string& source_dir, const std::string& target_dir):target_dir(target_dir),source_dir(source_dir){
     
    }
     bool Syncer::sync_file(const FileInfo& file){
+        fs::path src = fs::path(source_dir) / file.path;
+        fs::path dst = fs::path(target_dir) / file.path;
 
+        // 创建目标目录的父目录
+        std::error_code ec;
+        fs::create_directories(dst.parent_path(), ec);
+        if (ec) return false;
+
+        // 复制文件（覆盖已存在的）
+        fs::copy_file(src, dst, fs::copy_options::overwrite_existing, ec);
+        return !ec;
+      
     }
     bool Syncer::delete_file(const std::string& relative_path){
-
+        fs::path dst = fs::path(target_dir) / relative_path;
+        std::error_code ec;
+        return fs::remove(dst, ec);
+  
     }

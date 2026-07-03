@@ -14,6 +14,7 @@
 
 #include "config.h"
 #include <fstream>
+#include<iostream>
 // struct Config{
 //     std::string source_dir;                 // 源目录路径
 //     std::string target_dir;                 // 目标目录路径
@@ -28,6 +29,21 @@
 //     int max_retries = 3;                    // 最大重试次数，默认 3 次
 //     int retry_delay_secs = 2;               // 重试间隔，单位秒，默认 2 秒
 // };
+void ConfigPrintf(const Config&config){
+    try{
+    std::cout<<"source_dir:"<<config.source_dir<<std::endl;
+
+       std::cout<<"target_dir:"<<config.target_dir<<std::endl;
+        std::cout<<"sync_interval_secs:"<<config.sync_interval_secs<<" s"<<std::endl;
+      std::cout<<"log_level :"<<config.log_level<<std::endl;
+       std::cout<<"log_file_path :"<<config.log_file_path<<std::endl;
+    }catch(const json::exception &e){
+        throw std::runtime_error("JSON loss"+std::string(e.what()));
+    }
+
+ 
+
+}
 Config load_config(const std::string& path) 
 {
     std::ifstream f(path);
@@ -45,6 +61,7 @@ Config load_config(const std::string& path)
     config.log_level=j["log"]["level"];
     config.log_file_path=j["log"]["file_path"];
     config.max_retries=j["retry"]["max_attempts"];
+    
     return config;
 
     }catch(const json::exception &e){
@@ -53,3 +70,4 @@ Config load_config(const std::string& path)
     
 
 }
+

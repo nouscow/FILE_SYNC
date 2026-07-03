@@ -19,14 +19,47 @@
 #ifndef SCANNER_H
 #define SCANNER_H
 #include<string>
+#include<filesystem>
+#include<vector>
+#include<map>
+#include<set>
+namespace fs = std::filesystem;
+struct FileInfo {
+    fs::path path;//相对路径
+	fs::file_time_type last_change_time;//最后修改时间
+	int file_size;//文件大小
+	bool operator==(const FileInfo &other) {
+		if (this->path == other.path&&this->file_size == other.file_size && this->last_change_time == other.last_change_time) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	bool operator!=(const FileInfo& other) {
+		if (this->path == other.path && this->file_size == other.file_size && this->last_change_time == other.last_change_time) {
+			return false;
+		}
+		else {
+			return true;
+		}
+	}
+	bool operator<(const FileInfo& other) const {
+		return file_size < other.file_size; // 按文件名升序
+		
+	}
+};
+
 
 class Scanner{
-   
-};
-struct FileInfo{
-  const std::string path;//相对路径
-  std::string last_change_time;//最后修改时间
-  int file_size;//文件大小
+   private:
+	  
+	 
+	std::vector<FileInfo>list_files(const fs::path& dir);
+   public:
+	  std::set<FileInfo> diff(std::vector<FileInfo>sour, std::vector<FileInfo>tar);
+      std::set<FileInfo> scan(const fs::path& source, const fs::path& targe);
+
 };
 
 #endif // SCANNER_H

@@ -11,7 +11,7 @@
  * - Monitor(int interval_secs, SyncCallback callback)
  * - void start()   // 启动后台线程
  * - void stop()    // 请求停止
- * - bool is_running() const
+
  *
  * 注意事项：
  * - start() 内部创建分离线程（std::thread::detach），需确保回调函数生命周期有效。
@@ -22,16 +22,26 @@
 #ifndef MONITOR_H
 #define MONITOR_H
 #include<functional>
+#include<atomic>
+#include<thread>
+
 class Monitor{
-    int interval_secs;
+
 public:
 using SyncCallback=std::function<void()>;
 Monitor(int interval_secs, SyncCallback callback);
 void start() ;  // 启动后台线程
 void stop()  ;  // 请求停止
-bool is_running() const;
+
+private:
+    int interval_secs;//轮询间隔
+    SyncCallback callback;//要调用的同步函数
+    std::atomic<bool> running_;//线程运行标志
+    std::thread worker_;
+    
+    void loop();//线程主循环
+
 };
 
 
 #endif // MONITOR_H
-// ... 类声明 ...

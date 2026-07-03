@@ -37,16 +37,14 @@ set(SOURCES
     src/monitor.cpp
 )
 
-# 不再使用 FetchContent
-# include(FetchContent)
-# FetchContent_Declare(...)
-
+file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/logs)
 add_executable(${PROJECT_NAME} ${SOURCES})
-# 不再需要 target_link_libraries 链接 json
-
+configure_file(${CMAKE_SOURCE_DIR}/config.json ${CMAKE_SOURCE_DIR}/config.json COPYONLY)
+file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/logs)
 # 平台宏定义
 if(WIN32)
     target_compile_definitions(${PROJECT_NAME} PRIVATE PLATFORM_WINDOWS)
+   
 elseif(UNIX AND NOT APPLE)
     target_compile_definitions(${PROJECT_NAME} PRIVATE PLATFORM_LINUX)
 endif()

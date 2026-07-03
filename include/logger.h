@@ -23,18 +23,26 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 #include<string>
+
+#include<fstream>
 enum LogLevel{DEBUG=0,INFO=1,ERROR=2};
+#include<mutex>
+#include<chrono>
 class Logger{
 private:
 const std::string& file_path; 
 LogLevel level;
+std::ofstream file_;
+std::mutex mutex_;
 
 public:
-  Logger(const std::string& file_path,LogLevel level = LogLevel::INFO);
+  Logger( std::string file_path,LogLevel level = LogLevel::INFO);
   void log(LogLevel level, const std::string& message);
    void debug(const std::string& msg);
    void info(const std::string& msg);
     void error(const std::string& msg);
+    std::string get_timestamp();
+    ~Logger();
 };
 
 
