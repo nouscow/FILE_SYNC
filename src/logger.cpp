@@ -21,6 +21,7 @@
 #include <sstream>
 #include <iomanip>
 #include<mutex>
+#include<string>
 Logger::Logger(std::string file_path, LogLevel level) :file_path(file_path), level(level) {
 
        file_.open(file_path,std::ios::app);
@@ -33,11 +34,33 @@ Logger::Logger(std::string file_path, LogLevel level) :file_path(file_path), lev
       if (level < this->level)return;
       std::lock_guard<std::mutex>lock(mutex_);
       if (file_.is_open()) {
-          file_ << level << message << std::endl;
+
+        
+          file_ <<"["<<this->getLeveStr(level)<<"]["<<this->get_timestamp()<<"]["<< message <<"]"<< std::endl;
           file_.flush();
       }
 
   }
+   std::string Logger::getLeveStr(LogLevel level){
+    std::string levelstr;
+        switch (level)
+        {
+        case 0:
+        levelstr="DEBUG";
+        break;
+        case 1:
+        levelstr="INFO";
+        break;
+        case 2:
+         levelstr="ERROR";
+        break;
+
+        default:
+          levelstr="UNKNOWN_ERROR";
+            break;
+        }
+        return levelstr;
+   }
   std::string Logger::get_timestamp() {
       // 获取当前系统时间点
       auto now = std::chrono::system_clock::now();

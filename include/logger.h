@@ -30,7 +30,7 @@ enum LogLevel{DEBUG=0,INFO=1,ERROR=2};
 #include<chrono>
 class Logger{
 private:
-const std::string& file_path; 
+std::string file_path; 
 LogLevel level;
 std::ofstream file_;
 std::mutex mutex_;
@@ -41,6 +41,7 @@ public:
    void debug(const std::string& msg);
    void info(const std::string& msg);
     void error(const std::string& msg);
+    std::string getLeveStr(LogLevel level);
     std::string get_timestamp();
     ~Logger();
 };

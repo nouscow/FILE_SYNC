@@ -7,7 +7,7 @@
 - **定时轮询同步**（Windows/macOS）：按配置的间隔扫描源目录，对比差异后同步变更文件。
 - **inotify 事件同步**（Linux）：通过 `inotify` 监听目录事件，有变更时立即触发同步。
 - **JSON 配置**：通过 `config.json` 指定源目录、目标目录、轮询间隔、日志路径等参数。
-- **日志记录**：线程安全的文件日志，支持 DEBUG/INFO/ERROR 三级过滤。
+- **日志记录**：线程安全的文件日志，支持 DEBUG/INFO/ERROR 三级过滤，输出格式为 `[LEVEL][YYYY-MM-DD HH:MM:SS][消息]`。
 - **信号处理**：响应 SIGINT/SIGTERM（Ctrl+C）优雅退出。
 - **目录自动创建**：启动时自动创建配置中指定的源目录和目标目录；同步时自动在目标端创建缺失的子目录。
 
@@ -140,19 +140,17 @@ Syncer 的 `sync_file()` 根据 FileInfo 的相对路径拼接出源和目标的
 
 ## 已知限制
 
-- **日志无时间戳**：`Logger` 实现了 `get_timestamp()` 方法，但 `log()` 中未调用，日志条目只输出级别编号（0/1/2）和消息文本，无时间信息。
 - **日志无滚动**：日志追加写入单一文件（`std::ios::app`），未实现按天滚动或大小限制。
 - **排除规则未生效**：`exclude_patterns` 被解析到 Config 中但未在 Scanner 或 Syncer 中使用。
 - **无增量同步**：每次同步都是全量对比 + 整文件复制，不支持断点续传或差量传输。
 - **FileInfo 排序依据**：`operator<` 按 `file_size` 排序（用于 `std::set` 操作），注释标注为"按文件名升序"与实际行为不一致。
-- **Monitor 无虚析构警告**：Monitor 基类现已声明 `virtual ~Monitor() = default`（C5205 警告已消除）。
 - **目录事件误触发**：`inotify_monitor` 的 `loop()` 仅检查 `event->len > 0`（即事件是否带文件名），不区分事件类型，对目录本身的 IN_ACCESS 等无关事件也会触发同步回调。
 
 ## 待做事项
 
 - 实现 exclude_patterns 过滤（在 Scanner::list_files 中跳过匹配文件）
 - 实现 Syncer 重试机制（指数退避）
-- 日志添加时间戳输出，实现按天/按大小滚动
+- 日志按天/按大小滚动
 - Linux 下 sendfile 零拷贝优化大文件传输
 - CLI 命令行参数支持（`--source`、`--target`、`--interval` 等）
 - inotify_monitor 精确过滤事件类型（只关注 IN_CREATE / IN_MODIFY / IN_DELETE / IN_MOVED_TO）
