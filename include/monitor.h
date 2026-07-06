@@ -27,7 +27,6 @@
 #include<string>
 class Monitor{
 
-
 protected:
 using SyncCallback=std::function<void()>;
  SyncCallback callback;//要调用的同步函数
