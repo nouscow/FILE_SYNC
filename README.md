@@ -23,7 +23,7 @@ Then run:
 ## Status
 
 - [x] Windows: polling monitor ✅
-- [ ] Linux: inotify monitor (WIP, Phase 2)
+- [x] Linux: inotify monitor (WIP, Phase 2)✅
 - [ ] sendfile zero-copy (Phase 3)
 - [ ] CLI args override (Phase 4)
 
