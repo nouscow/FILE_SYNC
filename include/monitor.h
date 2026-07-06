@@ -24,15 +24,29 @@
 #include<functional>
 #include<atomic>
 #include<thread>
-
+#include<string>
 class Monitor{
 
 public:
+
 using SyncCallback=std::function<void()>;
-Monitor(int interval_secs, SyncCallback callback);
+
+
 void start() ;  // 启动后台线程
 void stop()  ;  // 请求停止
 
+
+#ifdef _WIN32_||_WIN64_
+public:
+Monitor(int interval_secs, SyncCallback callback);
+#else
+public:
+Monitor(int interval_secs,std::string watch_dir, SyncCallback callback);
+private:
+int _fd_;//=inotify_init
+int _wd_;//=inotify_add_watch
+std::string watch_dir;//
+#endif
 private:
     int interval_secs;//轮询间隔
     SyncCallback callback;//要调用的同步函数
