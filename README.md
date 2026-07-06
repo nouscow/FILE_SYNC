@@ -1,131 +1,162 @@
 # FILE_SYNC
 
+跨平台文件目录同步工具，使用 C++17 编写。监控源目录中的文件变更（新增、修改、删除），自动同步到目标目录。Windows/macOS 下使用定时轮询，Linux 下使用 inotify 事件驱动。
 
-**FILE_SYNC** 是一个跨平台的文件目录实时同步工具，使用 C++17 编写。它能够高效地监控源目录中的文件变更（创建、修改、删除），并自动同步到目标目录。项目采用模块化设计，通过平台宏 (`PLATFORM_WINDOWS` / `PLATFORM_LINUX`) 在单个 `monitor.cpp` 中实现了 Windows 轮询与 Linux inotify 两种监控策略，为后续扩展提供了清晰的架构基础。
+## 功能
 
----
+- **定时轮询同步**（Windows/macOS）：按配置的间隔扫描源目录，对比差异后同步变更文件。
+- **inotify 事件同步**（Linux）：通过 `inotify` 监听目录事件，有变更时立即触发同步。
+- **JSON 配置**：通过 `config.json` 指定源目录、目标目录、轮询间隔、日志路径等参数。
+- **日志记录**：线程安全的文件日志，支持 DEBUG/INFO/ERROR 三级过滤。
+- **信号处理**：响应 SIGINT/SIGTERM（Ctrl+C）优雅退出。
+- **目录自动创建**：启动时自动创建配置中指定的源目录和目标目录；同步时自动在目标端创建缺失的子目录。
 
-## ✨ 特性
+## 环境要求
 
-- **跨平台**：Windows 下使用轮询（Polling），Linux 下使用 `inotify` 实时监控，一套代码双平台运行。
-- **实时同步**：Linux 版基于 `inotify` 事件驱动，文件变更后亚秒级触发同步。
-- **配置驱动**：通过 `config.json` 灵活配置源目录、目标目录、同步间隔等参数。
-- **日志系统**：线程安全、按天滚动的日志记录，方便追踪同步历史和错误。
-- **模块化设计**：`Monitor` 抽象基类 + 平台特化实现，易于扩展和维护。
-- **优雅退出**（即将完成）：采用 `select` + self-pipe 模式，避免粗暴关闭文件描述符导致的竞态条件。
-
----
-
-## 🚀 快速开始
-
-### 环境要求
-
-- 编译器：支持 C++17 的 GCC 8+, Clang 10+, MSVC 2019+
+- 编译器：支持 C++17 的 MSVC 2019+、GCC 8+、Clang 10+
 - 构建系统：CMake >= 3.16
-- 第三方库：`nlohmann/json`（已包含在 `thirdparty/` 目录下）
+- 第三方库：nlohmann/json（已包含在 `thirdparty/` 中，无需额外安装）
 
-### 构建与运行
+## 构建与运行
+
+### Windows（Visual Studio）
 
 ```bash
-git clone https://github.com/nouscow/FILE_SYNC.git
-cd FILE_SYNC
+cmake -S . -B build -G "Visual Studio 18 2026" -A x64
+cmake --build build --config Debug
+```
+
+构建完成后，可执行文件位于 `build/bin/Debug/file_sync.exe`，config.json 和 logs 目录会由 post-build 步骤自动复制到 exe 同级目录。
+
+在 VS Code 中打开项目文件夹后，按 F5 即可调试运行（已配置 `.vscode/launch.json`）。
+
+### Linux / macOS
+
+```bash
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
-make -j$(nproc)
-
-# 编辑配置文件（可选）
-vim ../config.json
-
-# 运行
+cmake --build . -j$(nproc)
 ./bin/file_sync
 ```
 
-首次运行会自动创建 `logs/` 目录，并生成当日日志文件。
+程序启动后会在控制台打印源目录和目标目录路径，然后进入后台轮询/inotify 监听循环。按 Ctrl+C 停止。
 
----
-
-## 📁 项目结构
+## 项目结构
 
 ```
 FILE_SYNC/
 ├── include/
-│   ├── config.h          # 配置结构体与加载函数
-│   ├── logger.h          # 日志类（线程安全，按天滚动）
-│   ├── scanner.h         # 目录扫描与文件差异比对
-│   ├── syncer.h          # 文件同步执行器
-│   ├── polling_monitor.h          # 轮询目录监控
-│   ├── inotify_monitor.h          # Linux 实时监控
-│   └── monitor.h         # 目录监控抽象基类
+│   ├── config.h              Config 结构体定义与 load_config() 声明
+│   ├── logger.h              Logger 类（线程安全日志）
+│   ├── scanner.h             FileInfo 结构体、Scanner 类（目录扫描与差异比对）
+│   ├── syncer.h              Syncer 类（文件复制与删除）
+│   ├── monitor.h             Monitor 抽象基类（定义 start/stop/loop 接口）
+│   ├── polling_monitor.h     polling_monitor 子类（轮询实现）
+│   └── inotify_monitor.h     inotify_monitor 子类（Linux inotify 实现）
 ├── src/
-│   ├── main.cpp          # 程序入口，模块组装与事件循环
-│   ├── config.cpp
-│   ├── logger.cpp
-│   ├── scanner.cpp
-│   ├── syncer.cpp
-│   ├── polling_monitor.cpp
-│   ├── inotify_monitor.cpp
-│   └── monitor.cpp  
+│   ├── main.cpp              程序入口：加载配置、组装模块、信号处理、事件循环
+│   ├── config.cpp            load_config() 实现，解析 config.json
+│   ├── logger.cpp            Logger 实现，互斥锁保护的日志写入
+│   ├── scanner.cpp           list_files() 递归遍历、diff() 对称差集比对、scan() 组合调用
+│   ├── syncer.cpp            sync_file() 文件复制、delete_file() 文件删除
+│   ├── monitor.cpp           Monitor 基类构造函数实现
+│   ├── polling_monitor.cpp   轮询监控：sleep + callback 循环
+│   └── inotify_monitor.cpp   inotify 监控：read() 阻塞等待事件（仅 Linux 编译）
 ├── thirdparty/
 │   └── nlohmann/
-│       └── json.hpp      # JSON 解析单头文件库
-├── config.json           # 默认配置文件
-├── CMakeLists.txt
-└── README.md
+│       └── json.hpp          nlohmann/json 单头文件库
+├── config.json               默认配置文件
+├── CMakeLists.txt            CMake 构建脚本
+└── LICENSE                   MIT 许可证
 ```
 
----
+## 架构说明
 
-## 🧠 技术架构
+### 模块关系
 
-### 跨平台策略：单文件 + 条件编译
-
-所有平台相关的监控逻辑均集中在 `monitor.cpp` 中，通过 CMake 定义的宏 `PLATFORM_WINDOWS` 或 `PLATFORM_LINUX` 进行条件编译。这样既保持了项目结构的简洁，又便于后续独立拆分。
-
-```cpp
-// monitor.cpp 中的核心选择
-#if defined(PLATFORM_LINUX)
-    // Linux inotify 实现
-#elif defined(PLATFORM_WINDOWS)
-    // Windows 轮询实现
-#endif
+```
+main.cpp
+  ├─ load_config()  ──→  Config 结构体
+  ├─ Logger           ──→  logs/file_sync.log
+  ├─ Scanner          ──→  scan(source, target) → set<FileInfo>
+  ├─ Syncer           ──→  sync_file() / delete_file()
+  └─ Monitor (抽象基类)
+       ├─ polling_monitor   (Windows/macOS)
+       └─ inotify_monitor   (Linux)
 ```
 
-### Linux 实时监控（inotify）
+程序启动时，`main()` 加载配置、初始化 Logger、创建 Scanner 和 Syncer 实例，然后定义一个同步回调 lambda。该回调的核心流程是：`scanner.scan()` 扫描源和目标目录 → `Scanner::diff()` 用 `std::set_symmetric_difference` 计算差异集 → 遍历差异集，对每个文件调用 `syncer.sync_file()` 或 `syncer.delete_file()`。
 
-- **事件驱动**：使用 `inotify` 监听 `IN_CREATE | IN_MODIFY | IN_CLOSE_WRITE | IN_MOVED_TO` 事件，避免轮询带来的 CPU 空转。
-- **工作线程**：`Monitor` 在独立线程中运行 `loop()` 函数，阻塞在 `read()` 上等待事件。
-- **事件处理**：读取 `inotify_event` 结构体，提取文件名并调用回调函数触发同步。
+Monitor 使用多态：`main()` 中通过 `#ifdef __linux__` 选择创建 `inotify_monitor` 或 `polling_monitor`，以 `std::unique_ptr<Monitor>` 持有。调用 `start()` 启动后台线程，`stop()` 等待线程退出。
 
-### Windows 轮询监控
+### 差异检测机制
 
-- **定时扫描**：每隔 `interval_secs` 秒遍历源目录，通过比较文件最后修改时间和大小判断是否需要同步。
-- **简单可靠**：不依赖 Windows 特有 API，适合跨平台原型开发。
+Scanner 的 `scan()` 方法分别对源目录和目标目录调用 `list_files()`（基于 `std::filesystem::recursive_directory_iterator`），收集所有文件的相对路径、大小和最后修改时间。然后 `diff()` 将两组 FileInfo 放入 `std::set`，通过 `std::set_symmetric_difference` 找出只存在于一侧或两侧不同的文件。FileInfo 的 `operator<` 按 `file_size` 排序以支持 set 操作。
 
-### 配置与日志
+### 文件同步
 
-- **配置**：使用 `nlohmann/json` 解析 `config.json`，支持 `source_dir`、`target_dir`、`interval_seconds`、`verbose` 等字段。
-- **日志**：`Logger` 类使用 `std::mutex` 保证线程安全，按天生成日志文件（`sync_YYYY-MM-DD.log`），支持 INFO/ERROR 级别。
+Syncer 的 `sync_file()` 根据 FileInfo 的相对路径拼接出源和目标的绝对路径，先用 `std::filesystem::create_directories` 创建目标端的父目录，再用 `std::filesystem::copy_file` 配合 `overwrite_existing` 选项复制文件。`delete_file()` 用 `std::filesystem::remove` 删除目标端对应文件。两者都使用 `std::error_code` 版本的 API 避免异常抛出，直接返回 bool 表示成功与否。
 
----
+### 平台监控策略
 
-## 📊 项目进度
+- **polling_monitor**：后台线程中 `loop()` 循环执行 `sleep_for(interval_secs)` → 检查 `running_` 标志 → 调用 callback。简单可靠，不依赖平台特有 API。
+- **inotify_monitor**：`start()` 中调用 `inotify_init()` 和 `inotify_add_watch()` 注册 `IN_ALL_EVENTS`。`loop()` 中阻塞在 `read()` 上，收到事件后解析 `inotify_event` 结构体，对有文件名的触发 callback。`stop()` 中移除 watch 并关闭 fd。整个实现用 `#ifdef __linux__` 包裹，非 Linux 平台不参与编译。
 
-| 阶段 | 功能 | 状态 |
-|------|------|------|
-| **Phase 1** | 跨平台项目骨架，Windows 轮询同步 | ✅ 完成 |
-| **Phase 2** | Linux inotify 实时监控（基础版） | ✅ 完成 |
-| **Phase 2.1** | `select` + self-pipe 优雅退出 | 🔜 进行中 |
-| **Phase 3** | `sendfile` 零拷贝优化 (Linux) | 📅 规划中 |
-| **Phase 4** | CLI 命令行参数支持 | 📅 规划中 |
+## 配置说明
 
----
+`config.json` 示例：
 
-## 🤝 贡献
+```json
+{
+    "source_dir": "./test_source",
+    "target_dir": "./test_target",
+    "sync_interval_secs": 5,
+    "exclude_patterns": [".tmp$", ".swp$", "~$"],
+    "log": {
+        "level": "INFO",
+        "file_path": "./logs/file_sync.log"
+    },
+    "retry": {
+        "max_attempts": 3,
+        "base_delay_ms": 1000
+    }
+}
+```
 
-欢迎任何形式的贡献！如果你有好的想法或发现了 Bug，请提出 Issue 或 Pull Request。
+当前实际生效的字段：
 
----
+| 字段 | 说明 | 默认值 |
+|------|------|--------|
+| `source_dir` | 源目录路径 | 无（必填） |
+| `target_dir` | 目标目录路径 | 无（必填） |
+| `sync_interval_secs` | 轮询间隔（秒），仅 polling_monitor 使用 | 5 |
+| `log.level` | 日志级别（DEBUG/INFO/ERROR） | INFO |
+| `log.file_path` | 日志文件路径 | ./logs/file_sync.log |
 
-## 📄 许可
+以下字段在 Config 结构体中有定义、`load_config()` 会解析，但当前同步流程中尚未实际使用：
 
-本项目采用 MIT 许可证。详情请参见 LICENSE 文件。
+- `exclude_patterns`：排除规则（正则表达式列表），Scanner 遍历和 Syncer 同步时均未过滤。
+- `retry.max_attempts` / `retry.base_delay_ms`：重试参数，Syncer 当前未实现重试逻辑。
+
+## 已知限制
+
+- **日志无时间戳**：`Logger` 实现了 `get_timestamp()` 方法，但 `log()` 中未调用，日志条目只输出级别编号（0/1/2）和消息文本，无时间信息。
+- **日志无滚动**：日志追加写入单一文件（`std::ios::app`），未实现按天滚动或大小限制。
+- **排除规则未生效**：`exclude_patterns` 被解析到 Config 中但未在 Scanner 或 Syncer 中使用。
+- **无增量同步**：每次同步都是全量对比 + 整文件复制，不支持断点续传或差量传输。
+- **FileInfo 排序依据**：`operator<` 按 `file_size` 排序（用于 `std::set` 操作），注释标注为"按文件名升序"与实际行为不一致。
+- **Monitor 无虚析构警告**：Monitor 基类现已声明 `virtual ~Monitor() = default`（C5205 警告已消除）。
+- **目录事件误触发**：`inotify_monitor` 的 `loop()` 仅检查 `event->len > 0`（即事件是否带文件名），不区分事件类型，对目录本身的 IN_ACCESS 等无关事件也会触发同步回调。
+
+## 待做事项
+
+- 实现 exclude_patterns 过滤（在 Scanner::list_files 中跳过匹配文件）
+- 实现 Syncer 重试机制（指数退避）
+- 日志添加时间戳输出，实现按天/按大小滚动
+- Linux 下 sendfile 零拷贝优化大文件传输
+- CLI 命令行参数支持（`--source`、`--target`、`--interval` 等）
+- inotify_monitor 精确过滤事件类型（只关注 IN_CREATE / IN_MODIFY / IN_DELETE / IN_MOVED_TO）
+
+## 许可
+
+MIT License，详见 LICENSE 文件。
