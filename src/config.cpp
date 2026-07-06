@@ -12,7 +12,8 @@
  * - 第四阶段需支持命令行参数覆盖（如 --source），此处可预留接口。
  */
 
-#include "config.h"
+
+#include"config.h"
 #include <fstream>
 #include<iostream>
 // struct Config{

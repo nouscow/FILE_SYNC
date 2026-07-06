@@ -37,7 +37,7 @@ Monitor(SyncCallback callback);
 virtual void start()=0 ;  // 启动后台线程
 virtual void stop()=0  ;  // 请求停止
 virtual void loop()=0;//线程主循环
-
+virtual ~Monitor()=default;
 };
 
 

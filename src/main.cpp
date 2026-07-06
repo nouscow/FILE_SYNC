@@ -74,7 +74,7 @@ int main() {
 
     // 加载配置
     Config cfg = load_config("config.json");
-    std::cout << "源目录: " << cfg.source_dir << "\n目标目录: " << cfg.target_dir << std::endl;
+    std::cout << "souce_dir: " << cfg.source_dir << "\ntarget_dir: " << cfg.target_dir << std::endl;
 
     // 初始化日志
     Logger logger(cfg.log_file_path);
@@ -134,7 +134,7 @@ int main() {
    
     monitor->start();
     logger.info("监控已启动，按 Ctrl+C 停止");
-    std::cout << "监控已启动，按 Ctrl+C 停止" << std::endl;
+    std::cout << "it is stop by Ctrl+C" << std::endl;
     // 主线程等待退出信号
     while (!quit) {
 

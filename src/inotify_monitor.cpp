@@ -1,3 +1,4 @@
+#ifdef __linux__
 #include"inotify_monitor.h"
 #include "monitor.h"
 #include<thread>
@@ -60,3 +61,4 @@ void inotify_monitor::loop() {
 		
 	}
 }
+#endif
