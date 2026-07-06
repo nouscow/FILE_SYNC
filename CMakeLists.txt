@@ -30,7 +30,10 @@ set(THIRDPARTY_DIR ${CMAKE_SOURCE_DIR}/thirdparty)
 # ---- 可执行目标 ----
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-# ---- 头文件目录 ----
+
+
+# ---- 头文件目录（私有，不泄露给其他目标） ----
+
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${PROJECT_INCLUDE_DIR}
     ${THIRDPARTY_DIR}

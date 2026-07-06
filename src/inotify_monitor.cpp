@@ -48,6 +48,7 @@ void inotify_monitor::loop() {
             event=(struct inotify_event*)(buf+pos);
 			if(event->len>0){
 				if (running_ && callback) {
+
 			      
 					callback();
 		}

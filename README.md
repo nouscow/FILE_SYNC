@@ -36,8 +36,11 @@ make -j$(nproc)
 # 编辑配置文件（可选）
 vim ../config.json
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 2372363cac9d238f0d3a42f1a0f3fe64d05afb27
 # 运行
 ./bin/file_sync
 ```

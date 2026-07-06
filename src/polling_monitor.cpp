@@ -3,8 +3,10 @@
 #include<thread>
 #include<string>
 #include<iostream>
+
 polling_monitor::polling_monitor(int interval_secs, SyncCallback callback):Monitor(std::move(callback)){
   this->interval_secs=interval_secs;
+
 }
 void polling_monitor::start() {
 	if (running_)return;
