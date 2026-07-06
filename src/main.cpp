@@ -134,7 +134,7 @@ int main() {
    
     monitor->start();
     logger.info("监控已启动，按 Ctrl+C 停止");
-    std::cout << "003" << std::endl;
+    std::cout << "监控已启动，按 Ctrl+C 停止" << std::endl;
     // 主线程等待退出信号
     while (!quit) {
 

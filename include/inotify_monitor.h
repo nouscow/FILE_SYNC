@@ -1,5 +1,6 @@
 // inotify_monitor.h（Linux）
 #include"monitor.h"
+
 class inotify_monitor:public Monitor{
 
 private:

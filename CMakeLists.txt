@@ -1,50 +1,68 @@
-# CMakeLists.txt
-#
-# 功能：构建系统配置
-#
-# 内容：
-# - 设置最低 CMake 版本 3.16
-# - 项目名称 file_sync，C++17 标准
-# - 添加头文件目录 include/ 和第三方库目录 thirdparty/
-# - 列出所有源文件（src/main.cpp, config.cpp, logger.cpp, scanner.cpp, syncer.cpp, monitor.cpp）
-# - 生成可执行文件 file_sync
-# - 平台宏定义：PLATFORM_WINDOWS 或 PLATFORM_LINUX
-#
-# 注意事项：
-# - 使用 FetchContent 或本地路径引入 nlohmann/json。
-# - 第二阶段需添加 Linux 特定源文件（如 inotify_monitor.cpp）。
-# - 第三阶段可链接 pthread（如果使用线程池）。
 cmake_minimum_required(VERSION 3.16)
+
+# ---- 项目信息 ----
 project(file_sync VERSION 1.0 LANGUAGES CXX)
 
+# ---- C++ 标准 ----
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+# ---- 输出目录 ----
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-include_directories(${CMAKE_SOURCE_DIR}/include)
-
-# 添加本地 json.hpp 路径
-include_directories(${CMAKE_SOURCE_DIR}/thirdparty)
-
+# ---- 源文件 ----
 set(SOURCES
     src/main.cpp
     src/config.cpp
     src/logger.cpp
     src/scanner.cpp
     src/syncer.cpp
-    src/monitor.cpp
+    src/monitor.cpp  
+    src/inotify_monitor.cpp
+    src/polling_monitor.cpp
 )
 
-file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/logs)
+# ---- 头文件路径 ----
+set(PROJECT_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)
+set(THIRDPARTY_DIR ${CMAKE_SOURCE_DIR}/thirdparty)
+
+# ---- 可执行目标 ----
 add_executable(${PROJECT_NAME} ${SOURCES})
-configure_file(${CMAKE_SOURCE_DIR}/config.json ${CMAKE_SOURCE_DIR}/config.json COPYONLY)
-file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/logs)
-# 平台宏定义
+
+# ---- 头文件目录（私有，不泄露给其他目标） ----
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${PROJECT_INCLUDE_DIR}
+    ${THIRDPARTY_DIR}
+)
+
+# ---- 平台宏定义 ----
 if(WIN32)
     target_compile_definitions(${PROJECT_NAME} PRIVATE PLATFORM_WINDOWS)
-   
 elseif(UNIX AND NOT APPLE)
     target_compile_definitions(${PROJECT_NAME} PRIVATE PLATFORM_LINUX)
+    # 在 Linux 下链接 pthread（如果将来使用 std::thread 需要，但 C++17 通常不需要显式链接）
+    find_package(Threads REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)
 endif()
+
+# ---- 配置文件复制 ----
+# 将 config.json 复制到可执行文件所在的输出目录
+configure_file(
+    ${CMAKE_SOURCE_DIR}/config.json
+    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/config.json
+    COPYONLY
+)
+
+# ---- 创建日志目录（可选，运行时自动创建更好） ----
+file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/logs)
+
+# ---- 编译选项 ----
+target_compile_options(${PROJECT_NAME} PRIVATE
+    $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wall -Wextra -Wpedantic>
+    $<$<CXX_COMPILER_ID:MSVC>:/W4>
+)
+
+# ---- 安装（可选） ----
+install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
+install(FILES ${CMAKE_SOURCE_DIR}/config.json DESTINATION bin)
