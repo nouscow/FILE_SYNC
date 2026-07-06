@@ -51,11 +51,12 @@
 #include"config.h"
 #include"logger.h"
 #include<filesystem>
-
+#include"inotify_monitor.h"
+#include"polling_monitor.h"
 #include "scanner.h"
 #include "syncer.h"
 #include "monitor.h"
-
+#include<memory>
 
 std::atomic<bool> quit(false);
 Logger* global_logger = nullptr;
@@ -87,7 +88,7 @@ int main() {
     //// 初始化模块
     Scanner scanner=Scanner();
     Syncer syncer(cfg.source_dir, cfg.target_dir);
-    std::cout << "002" << std::endl;
+
     //// 定义同步回调（核心逻辑）
     auto sync_callback = [&]() {
         logger.info("开始扫描...");
@@ -123,13 +124,15 @@ int main() {
         };
 
     // 启动监控
+     std::unique_ptr<Monitor>monitor;
     #ifdef __linux__
-     Monitor monitor(cfg.sync_interval_secs,cfg.source_dir, sync_callback);
+    monitor=std::make_unique<inotify_monitor>(cfg.source_dir, sync_callback);
+
     #else
-     Monitor monitor(cfg.sync_interval_secs, sync_callback);
+      monitor=std::make_unique<polling_monitor>(cfg.sync_interval_secs, sync_callback);
     #endif
    
-    monitor.start();
+    monitor->start();
     logger.info("监控已启动，按 Ctrl+C 停止");
     std::cout << "003" << std::endl;
     // 主线程等待退出信号
@@ -138,7 +141,7 @@ int main() {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-    //monitor.stop();
+    monitor->stop();
     logger.info("程序正常退出");
     return 0;
 }

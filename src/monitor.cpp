@@ -17,22 +17,31 @@
 #include "monitor.h"
 #include<thread>
 #include<string>
-#ifdef define(_WIN32_)||define(_WIN64_)
-Monitor::Monitor(int interval_secs, SyncCallback callback):interval_secs(interval_secs),callback(std::move(callback)),running_(false){
+#include<iostream>
+#include"inotify_monitor.h"
+#include"polling_monitor.h"
+#ifdef __linux__
+#include<sys/inotify.h>
+#include<unistd.h>
+#endif
+Monitor::Monitor(SyncCallback callback):callback(std::move(callback)),running_(false){
 
 }
-void Monitor::start() {
+polling_monitor::polling_monitor(int interval_secs, SyncCallback callback):interval_secs(interval_secs),Monitor(std::move(callback)){
+
+}
+void polling_monitor::start() {
 	if (running_)return;
 	running_ = true;
 	worker_ = std::thread(&Monitor::loop,this);
 }  // 启动后台线程
-void Monitor::stop(){
+void polling_monitor::stop(){
 	running_ = false;
 	if (worker_.joinable()) {
 		worker_.join();
 	}
 } // 请求停止
-void Monitor::loop() {
+void polling_monitor::loop() {
 	while (running_) {
 		std::this_thread::sleep_for(std::chrono::seconds(this->interval_secs));
 		if (running_ && callback) {
@@ -40,14 +49,12 @@ void Monitor::loop() {
 		}
 	}
 }
-#else
-#include<sys/inotify.h>
-#include<unistd.h>
-#include<iostream>
-Monitor::Monitor(int interval_secs,std::string watch_dir,SyncCallback callback):interval_secs(interval_secs),watch_dir(watch_dir),callback(std::move(callback)),running_(false){
+
+
+inotify_monitor::inotify_monitor(std::string watch_dir,SyncCallback callback):watch_dir(watch_dir),Monitor(std::move(callback)){
 
 }
-void Monitor::start() {
+void inotify_monitor::start() {
 	if (running_)return;
 	running_ = true;
 	this->_fd_=inotify_init();
@@ -62,7 +69,7 @@ void Monitor::start() {
 	}
 	worker_ = std::thread(&Monitor::loop,this);
 }  // 启动后台线程
-void Monitor::stop(){
+void inotify_monitor::stop(){
 	running_ = false;
 
 	if(_fd_>=0){
@@ -74,7 +81,7 @@ void Monitor::stop(){
 		worker_.join();
 	}
 } // 请求停止
-void Monitor::loop() {   
+void inotify_monitor::loop() {   
 
 	while (running_) {
 		char buf[4096];
@@ -97,4 +104,3 @@ void Monitor::loop() {
 	}
 }
 
-#endif

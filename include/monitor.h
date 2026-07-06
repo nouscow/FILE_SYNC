@@ -27,35 +27,20 @@
 #include<string>
 class Monitor{
 
-public:
 
+protected:
 using SyncCallback=std::function<void()>;
-
-
-void start() ;  // 启动后台线程
-void stop()  ;  // 请求停止
-
-
-#ifdef _WIN32_||_WIN64_
+ SyncCallback callback;//要调用的同步函数
+ std::atomic<bool> running_;//线程运行标志
+ std::thread worker_;
 public:
-Monitor(int interval_secs, SyncCallback callback);
-#else
-public:
-Monitor(int interval_secs,std::string watch_dir, SyncCallback callback);
-private:
-int _fd_;//=inotify_init
-int _wd_;//=inotify_add_watch
-std::string watch_dir;//
-#endif
-private:
-    int interval_secs;//轮询间隔
-    SyncCallback callback;//要调用的同步函数
-    std::atomic<bool> running_;//线程运行标志
-    std::thread worker_;
-    
-    void loop();//线程主循环
+Monitor(SyncCallback callback);
+virtual void start()=0 ;  // 启动后台线程
+virtual void stop()=0  ;  // 请求停止
+virtual void loop()=0;//线程主循环
 
 };
+
 
 
 #endif // MONITOR_H
