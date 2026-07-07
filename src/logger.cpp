@@ -1,17 +1,6 @@
 /**
  * @file logger.cpp
- * @brief 日志类的实现
- *
- * 实现要点：
- * - 静态单例模式：通过 init() 初始化，get() 获取引用。
- * - 构造函数以追加模式打开文件（std::ios::app）。
- * - 每次写入前检查文件大小，超过 max_size_bytes 则滚动。
- * - 滚动策略：当前文件重命名为 .1，旧的 .1 → .2，依此类推，超出 backup_count 的删除。
- * - 使用 std::lock_guard<std::mutex> 保护文件写操作。
- * - 支持日志级别过滤：低于设定级别的消息不写入。
- *
- * 平台差异：
- * - Windows 下使用 localtime_s()，Linux 下使用 localtime_r()。
+ * @brief 日志类实现：静态单例、级别过滤、文件大小滚动备份。
  */
 
 #include "logger.h"
@@ -28,6 +17,7 @@
 // 静态成员定义
 std::unique_ptr<Logger> Logger::logger = nullptr;
 
+// 构造：以追加模式打开日志文件
 Logger::Logger(std::string file_path, LogLevel lvl) :file_path(file_path), level(lvl) {
     file_.open(file_path, std::ios::app);
     if (!file_) {
@@ -35,18 +25,20 @@ Logger::Logger(std::string file_path, LogLevel lvl) :file_path(file_path), level
     }
 }
 
+// 初始化静态单例：创建 Logger 实例并设置滚动参数
 void Logger::init(const std::string& file_path, long max_size_bytes, int backup_count) {
     logger = std::make_unique<Logger>(file_path);
     logger->max_size_bytes = max_size_bytes;
     logger->backup_count = backup_count;
 }
 
+// 获取单例引用（必须先调用 init）
 Logger& Logger::get() {
     return *logger;
 }
 
+// 滚动备份：检查文件大小 → 超限则关闭文件 → 依次后移备份 → 重开新文件
 void Logger::rotate() {
-    // 检查当前日志文件大小
     file_.flush();
     std::error_code ec;
     auto size = std::filesystem::file_size(file_path, ec);
@@ -54,10 +46,9 @@ void Logger::rotate() {
         return;
     }
 
-    // 关闭当前文件
     file_.close();
 
-    // 滚动备份文件：删除最旧的，依次后移
+    // 删除最旧备份，依次后移：.2→.3, .1→.2
     std::string oldest = file_path + "." + std::to_string(backup_count);
     std::filesystem::remove(oldest, ec);
 
@@ -70,18 +61,17 @@ void Logger::rotate() {
     // 当前文件 → .1
     std::filesystem::rename(file_path, file_path + ".1", ec);
 
-    // 重新打开新文件
     file_.open(file_path, std::ios::app);
     if (!file_) {
         std::cout << "LOGGER OPEN ERROR after rotation" << std::endl;
     }
 }
 
+// 核心写入：级别过滤 → 加锁 → 滚动检查 → 格式化写入 → flush
 void Logger::log(LogLevel lvl, const std::string& message) {
     if (lvl < this->level) return;
     std::lock_guard<std::mutex> lock(mutex_);
 
-    // 写入前检查是否需要滚动
     rotate();
 
     if (file_.is_open()) {
@@ -90,6 +80,7 @@ void Logger::log(LogLevel lvl, const std::string& message) {
     }
 }
 
+// 将 LogLevel 枚举转为字符串
 std::string Logger::getLeveStr(LogLevel lvl) {
     std::string levelstr;
     switch (lvl)
@@ -110,6 +101,8 @@ std::string Logger::getLeveStr(LogLevel lvl) {
     return levelstr;
 }
 
+// 获取当前时间戳，格式 YYYY-MM-DD HH:MM:SS
+// Windows 用 localtime_s()，Linux 用 localtime_r()
 std::string Logger::get_timestamp() {
     auto now = std::chrono::system_clock::now();
     std::time_t now_c = std::chrono::system_clock::to_time_t(now);
@@ -126,18 +119,22 @@ std::string Logger::get_timestamp() {
     return oss.str();
 }
 
+// 便捷方法：DEBUG 级别
 void Logger::debug(const std::string& msg) {
     log(LogLevel::DEBUG, msg);
 }
 
+// 便捷方法：INFO 级别
 void Logger::info(const std::string& msg) {
     log(LogLevel::INFO, msg);
 }
 
+// 便捷方法：ERROR 级别
 void Logger::error(const std::string& msg) {
     log(LogLevel::ERROR, msg);
 }
 
+// 析构：关闭日志文件
 Logger::~Logger() {
     file_.close();
 }

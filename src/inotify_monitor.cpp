@@ -1,64 +1,72 @@
+/**
+ * @file inotify_monitor.cpp
+ * @brief inotify 实时监控器实现(Linux)：读取 inotify 事件驱动同步回调。
+ */
+
 #ifdef __linux__
-#include"inotify_monitor.h"
+#include "inotify_monitor.h"
 #include "monitor.h"
-#include<thread>
-#include<string>
-#include<iostream>
-#include<sys/inotify.h>
-#include<unistd.h>
+#include <thread>
+#include <string>
+#include <iostream>
+#include <sys/inotify.h>
+#include <unistd.h>
 
+// 构造：保存监视目录路径，传递回调给基类
 inotify_monitor::inotify_monitor(std::string watch_dir,SyncCallback callback):watch_dir(watch_dir),Monitor(std::move(callback)){
-
 }
+
+// 启动：初始化 inotify fd → 注册 watch → 启动后台线程
 void inotify_monitor::start() {
-	if (running_)return;
-	running_ = true;
-	this->_fd_=inotify_init();
-	if(_fd_==-1){
-		running_=false;
-		return;
-	}
-	this->_wd_=inotify_add_watch(this->_fd_,this->watch_dir.c_str(),IN_ALL_EVENTS);
-	if(this->_wd_==-1){
-		running_=false;
-		return;
-	}
-	worker_ = std::thread(&Monitor::loop,this);
-}  // 启动后台线程
+    if (running_)return;
+    running_ = true;
+    this->_fd_=inotify_init();
+    if(_fd_==-1){
+        running_=false;
+        return;
+    }
+    this->_wd_=inotify_add_watch(this->_fd_,this->watch_dir.c_str(),IN_ALL_EVENTS);
+    if(this->_wd_==-1){
+        running_=false;
+        return;
+    }
+    worker_ = std::thread(&Monitor::loop,this);
+}
+
+// 停止：移除 watch → 关闭 fd → join 等待线程退出
 void inotify_monitor::stop(){
-	running_ = false;
+    running_ = false;
+    if(_fd_>=0){
+        inotify_rm_watch(this->_fd_,this->_wd_);
+        close(_fd_);
+        this->_fd_=-1;
+    }
+    if (worker_.joinable()) {
+        worker_.join();
+    }
+}
 
-	if(_fd_>=0){
-		int res=inotify_rm_watch(this->_fd_,this->_wd_);
-		close(_fd_);
-		this->_fd_=-1;
-	}
-	if (worker_.joinable()) {
-		worker_.join();
-	}
-} // 请求停止
-void inotify_monitor::loop() {   
-
-	while (running_) {
-		char buf[4096];
-		struct inotify_event*event;
-		int event_len=sizeof(struct inotify_event);
-		int rd=read(this->_fd_,buf,sizeof(buf));
-		int pos=0;
-		while(rd>pos){
+// 主循环：阻塞读取 inotify 事件，解析 inotify_event 结构体，有文件名则触发 callback
+// TODO: 精确过滤事件类型
+//       当前仅检查 event->len > 0，对 IN_ACCESS 等无关事件也触发回调
+//       应只关注 IN_CREATE | IN_MODIFY | IN_DELETE | IN_MOVED_TO
+void inotify_monitor::loop() {
+    while (running_) {
+        char buf[4096];
+        struct inotify_event*event;
+        int event_len=sizeof(struct inotify_event);
+        int rd=read(this->_fd_,buf,sizeof(buf));
+        int pos=0;
+        while(rd>pos){
             event=(struct inotify_event*)(buf+pos);
-			if(event->len>0){
-				if (running_ && callback) {
-
-			      
-					callback();
-		}
-			}
-			int upsize=event_len+event->len;
-			pos+=upsize;
-
-		}
-		
-	}
+            if(event->len>0){
+                if (running_ && callback) {
+                    callback();
+                }
+            }
+            int upsize=event_len+event->len;
+            pos+=upsize;
+        }
+    }
 }
 #endif

@@ -1,19 +1,6 @@
 /**
  * @file scanner.h
- * @brief 目录扫描器声明
- *
- * 功能：
- * - 递归遍历源目录，收集所有文件的相对路径、最后修改时间、文件大小。
- * - 提供静态方法 diff()，对比源文件列表和目标文件列表，返回需要同步的文件列表。
- *
- * 数据结构：
- * - FileInfo：存储单个文件的相对路径、修改时间、大小。
- * - Scanner：持有源目录路径，提供 scan() 方法。
- *
- * 注意事项：
- * - 使用 std::filesystem::recursive_directory_iterator 遍历。
- * - 相对路径用于后续在目标目录中重建相同结构。
- * - diff() 的比较依据：文件不存在或修改时间/大小不同则视为需要同步。
+ * @brief 目录扫描器：递归遍历收集文件元数据，对比源/目标差异。
  */
 
 #ifndef SCANNER_H
@@ -24,42 +11,54 @@
 #include<map>
 #include<set>
 namespace fs = std::filesystem;
+
+// 单个文件的元数据
 struct FileInfo {
-    fs::path path;//相对路径
-	fs::file_time_type last_change_time;//最后修改时间
-	int file_size;//文件大小
-	bool operator==(const FileInfo &other) {
-		if (this->path == other.path&&this->file_size == other.file_size && this->last_change_time == other.last_change_time) {
-			return true;
-		}
-		else {
-			return false;
-		}
-	}
-	bool operator!=(const FileInfo& other) {
-		if (this->path == other.path && this->file_size == other.file_size && this->last_change_time == other.last_change_time) {
-			return false;
-		}
-		else {
-			return true;
-		}
-	}
-	bool operator<(const FileInfo& other) const {
-		return file_size < other.file_size; // 按文件名升序
-		
-	}
+    fs::path path;                          // 相对路径
+    fs::file_time_type last_change_time;    // 最后修改时间
+    int file_size;                          // 文件大小
+
+    // 三字段全部相同视为相等
+    bool operator==(const FileInfo &other) {
+        if (this->path == other.path&&this->file_size == other.file_size && this->last_change_time == other.last_change_time) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    bool operator!=(const FileInfo& other) {
+        if (this->path == other.path && this->file_size == other.file_size && this->last_change_time == other.last_change_time) {
+            return false;
+        }
+        else {
+            return true;
+        }
+    }
+
+    // TODO: 当前按 file_size 排序用于 std::set 操作，
+    //       注释标注"按文件名升序"与实际行为不一致，需修正为按 path 排序
+    bool operator<(const FileInfo& other) const {
+        return file_size < other.file_size;
+    }
 };
 
 
 class Scanner{
    private:
-	  
-	 
-	std::vector<FileInfo>list_files(const fs::path& dir);
-   public:
-	  std::set<FileInfo> diff(std::vector<FileInfo>sour, std::vector<FileInfo>tar);
-      std::set<FileInfo> scan(const fs::path& source, const fs::path& targe);
+      // 递归遍历目录，收集所有文件的 FileInfo
+      std::vector<FileInfo>list_files(const fs::path& dir);
 
+      // TODO: 实现 exclude_patterns 过滤
+      //       在 list_files() 中跳过匹配 exclude_patterns 的文件
+      //       需要传入 exclude_patterns 参数或存储为成员变量
+
+   public:
+      // 对两组 FileInfo 做对称差集，返回需要处理的文件集合
+      std::set<FileInfo> diff(std::vector<FileInfo>sour, std::vector<FileInfo>tar);
+
+      // 扫描源目录和目标目录，返回差异文件集合
+      std::set<FileInfo> scan(const fs::path& source, const fs::path& targe);
 };
 
 #endif // SCANNER_H

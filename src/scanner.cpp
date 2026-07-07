@@ -1,28 +1,18 @@
 /**
  * @file scanner.cpp
- * @brief 目录扫描器的实现
- *
- * 实现要点：
- * - scan() 调用私有方法 list_files() 递归遍历。
- * - list_files() 使用 recursive_directory_iterator，跳过目录自身。
- * - 使用 fs::relative() 获取相对于源目录的路径。
- * - diff() 使用 unordered_map 加速查找，时间复杂度 O(n+m)。
- * - 注意处理符号链接和权限错误（可忽略或记录日志）。
- *
- * 扩展：
- * - 第三阶段可加入排除规则过滤（在 scan() 中跳过匹配的文件）。
+ * @brief 目录扫描器实现：list_files() 递归遍历，diff() 对称差集对比。
  */
- // * - scan() 调用私有方法 list_files() 递归遍历。
- //  * - list_files() 使用 recursive_directory_iterator，跳过目录自身。
- //  * - 使用 fs::relative() 获取相对于源目录的路径。
- //  * - diff() 使用 unordered_map 加速查找，时间复杂度 O(n+m)。
+
 #include "scanner.h"
-#include<filesystem>
-#include<iostream>
-#include<unordered_map>
-#include<map>
-#include<set>
-#include<algorithm>
+#include <filesystem>
+#include <iostream>
+#include <unordered_map>
+#include <map>
+#include <set>
+#include <algorithm>
+
+// 对称差集对比：将两组 FileInfo 放入 std::set，
+// 用 set_symmetric_difference 找出只存在于一侧或两侧不同的文件
 std::set<FileInfo>Scanner::diff(std::vector<FileInfo>sour, std::vector<FileInfo>tar) {
 	std::set<FileInfo>res;
 	std::set<FileInfo>source, target;
@@ -37,10 +27,15 @@ std::set<FileInfo>Scanner::diff(std::vector<FileInfo>sour, std::vector<FileInfo>
 	 target.begin(),target.end(),
 	 std::inserter(res,res.begin())
 	);
-	
+
 	return res;
 
 }
+
+// 递归遍历目录，收集所有条目的 FileInfo（路径、大小、修改时间）
+// TODO: 跳过目录条目 — 当前 is_directory() 的条目也会被加入，
+//       导致子目录本身出现在 diff 结果中，应添加 if (entry.is_directory()) continue;
+// TODO: 实现 exclude_patterns 过滤 — 跳过匹配 exclude_patterns 正则的文件
 std::vector<FileInfo>Scanner::list_files(const fs::path& dir) {
 	std::vector<FileInfo>file;
 	if (!fs::exists(dir) || !fs::is_directory(dir)) {
@@ -61,6 +56,8 @@ std::vector<FileInfo>Scanner::list_files(const fs::path& dir) {
 	}
 	return file;
 }
+
+// 组合调用：分别扫描源和目标目录，返回差异文件集合
 std::set<FileInfo> Scanner::scan(const fs::path& source, const fs::path& targe){
 	std::vector<FileInfo>sour, tar;
 	sour = list_files(source);

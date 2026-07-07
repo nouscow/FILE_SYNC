@@ -1,23 +1,7 @@
 /**
  * @file logger.h
- * @brief 线程安全的日志类声明
- *
- * 功能：
- * - 支持三种日志级别：DEBUG、INFO、ERROR。
- * - 日志输出到文件，按天滚动（每日新文件）。
- * - 所有写操作加互斥锁，保证多线程安全。
- * - 提供便捷方法：debug(), info(), error()。
- *
- * 接口：
- * - Logger(const std::string& file_path, LogLevel level = LogLevel::INFO)
- * - void log(LogLevel level, const std::string& message)
- * - void debug(const std::string& msg)
- * - void info(const std::string& msg)
- * - void error(const std::string& msg)
- *
- * 注意事项：
- * - 析构函数自动关闭文件。
- * - 日志文件路径中的目录需预先创建，或由 Logger 自动创建。
+ * @brief 线程安全日志类，支持级别过滤和基于文件大小的滚动备份。
+ *        静态单例模式：init() 初始化，get() 获取引用。
  */
 
 #ifndef LOGGER_H
@@ -31,7 +15,7 @@ enum LogLevel{DEBUG=0,INFO=1,ERROR=2};
 #include<memory>
 class Logger{
 private:
-std::string file_path; 
+std::string file_path;
 LogLevel level;
 std::ofstream file_;
 std::mutex mutex_;
@@ -40,19 +24,34 @@ static std::unique_ptr<Logger> logger;
 long max_size_bytes = 10 * 1024 * 1024; // 默认 10MB
 int backup_count = 3;                    // 默认保留 3 份
 
-void rotate();                            // 检查文件大小，超限则滚动
+// 检查当前文件大小，超过 max_size_bytes 则滚动备份
+void rotate();
 
 public:
+  // 构造：以追加模式打开日志文件
   Logger( std::string file_path,LogLevel level = LogLevel::INFO);
+
+  // 初始化静态单例，设置滚动参数
   static void init(const std::string& file_path, long max_size_bytes = 10*1024*1024, int backup_count = 3);
-static Logger& get();
+
+  // 获取单例引用（必须先调用 init）
+  static Logger& get();
+
+  // 核心写入：级别过滤 → 加锁 → 滚动检查 → 写入文件
   void log(LogLevel lvl, const std::string& message);
-   void debug(const std::string& msg);
-   void info(const std::string& msg);
-    void error(const std::string& msg);
-    std::string getLeveStr(LogLevel level);
-    std::string get_timestamp();
-    ~Logger();
+
+  // 便捷方法：对应三个日志级别
+  void debug(const std::string& msg);
+  void info(const std::string& msg);
+  void error(const std::string& msg);
+
+  // 将 LogLevel 枚举转为字符串（DEBUG/INFO/ERROR）
+  std::string getLeveStr(LogLevel level);
+
+  // 获取当前时间戳，格式 YYYY-MM-DD HH:MM:SS
+  std::string get_timestamp();
+
+  ~Logger();
 };
 
 
