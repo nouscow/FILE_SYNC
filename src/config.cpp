@@ -14,8 +14,12 @@
 
 
 #include"config.h"
+#include <nlohmann/json.hpp>
 #include <fstream>
 #include<iostream>
+#include<string>
+#include <vector>
+#include"logger.h"
 // struct Config{
 //     std::string source_dir;                 // 源目录路径
 //     std::string target_dir;                 // 目标目录路径
@@ -30,6 +34,8 @@
 //     int max_retries = 3;                    // 最大重试次数，默认 3 次
 //     int retry_delay_secs = 2;               // 重试间隔，单位秒，默认 2 秒
 // };
+using nlohmann::json;
+
 void ConfigPrintf(const Config&config){
     try{
     std::cout<<"source_dir:"<<config.source_dir<<std::endl;
@@ -39,7 +45,7 @@ void ConfigPrintf(const Config&config){
       std::cout<<"log_level :"<<config.log_level<<std::endl;
        std::cout<<"log_file_path :"<<config.log_file_path<<std::endl;
     }catch(const json::exception &e){
-        throw std::runtime_error("JSON loss"+std::string(e.what()));
+        throw std::runtime_error(std::string("JSON loss") + e.what());
     }
 
  
@@ -49,7 +55,7 @@ Config load_config(const std::string& path)
 {
     std::ifstream f(path);
     if (!f.is_open()) {
-        throw std::runtime_error("Failed to open config file: " + path);
+        throw std::runtime_error(std::string("Failed to open config file: ") + path);
     }
     try{
     Config config;
@@ -61,12 +67,15 @@ Config load_config(const std::string& path)
     config.exclude_patterns=j["exclude_patterns"].get<std::vector<std::string>>();
     config.log_level=j["log"]["level"];
     config.log_file_path=j["log"]["file_path"];
+    config.log_max_size_mb=j["log"].value("max_size_mb", 10);
+    config.log_backup_count=j["log"].value("backup_count", 3);
     config.max_retries=j["retry"]["max_attempts"];
-    
+  
     return config;
 
     }catch(const json::exception &e){
-        throw std::runtime_error("JSON丢失"+std::string(e.what()));
+       
+        throw std::runtime_error(std::string("JSON丢失") + std::string(e.what()));
     }
     
 

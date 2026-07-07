@@ -28,6 +28,8 @@ struct Config{
     // 日志配置
     std::string log_level = "INFO";         // 日志级别：DEBUG/INFO/ERROR
     std::string log_file_path = "./logs/file_sync.log"; // 日志文件路径
+    int log_max_size_mb = 10;               // 单个日志文件最大大小(MB)，超过则滚动
+    int log_backup_count = 3;               // 滚动备份文件数量
 
     // 重试配置
     int max_retries = 3;                    // 最大重试次数，默认 3 次

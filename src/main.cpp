@@ -59,27 +59,26 @@
 #include<memory>
 
 std::atomic<bool> quit(false);
-Logger* global_logger = nullptr;
+
 
 void signal_handler(int) {
     quit = true;
-    if (global_logger) {
-        global_logger->info("收到退出信号，正在停止...");
-    }
+     Logger::get().info("收到退出信号，正在停止...");
+   
 }
 
 int main() {
     std::signal(SIGINT, signal_handler);
     std::signal(SIGTERM, signal_handler);
 
+    
     // 加载配置
     Config cfg = load_config("config.json");
     std::cout << "souce_dir: " << cfg.source_dir << "\ntarget_dir: " << cfg.target_dir << std::endl;
-
-    // 初始化日志
-    Logger logger(cfg.log_file_path);
-    global_logger = &logger;
-    logger.info("文件同步工具启动");
+// 初始化日志
+    Logger::init(cfg.log_file_path, cfg.log_max_size_mb * 1024L * 1024L, cfg.log_backup_count);
+   Logger::get().info("文件同步工具启动");
+  
 
     // 确保目录存在
     std::filesystem::create_directories(cfg.source_dir);
@@ -91,11 +90,12 @@ int main() {
 
     //// 定义同步回调（核心逻辑）
     auto sync_callback = [&]() {
-        logger.info("开始扫描...");
+        
+         Logger::get().info("开始扫描...");
         auto changes = scanner.scan(cfg.source_dir,cfg.target_dir);
 
         if (changes.empty()) {
-            logger.info("没有变化");
+            Logger::get().info("没有变化");
             return;
         }
 
@@ -106,18 +106,23 @@ int main() {
             std::filesystem::path src_path = std::filesystem::path(cfg.source_dir) / file.path;
             if (std::filesystem::exists(src_path)) {
                 if (syncer.sync_file(file)) {
-                    logger.info("已同步: " + rel_path);
+                    
+                      Logger::get().info("已同步: " + rel_path);
                 }
                 else {
-                    logger.error("同步失败: " + rel_path);
+
+                
+                    Logger::get().error("同步失败: " + rel_path);
                 }
             }
             else {
                 if (syncer.delete_file(rel_path)) {
-                    logger.info("已删除: " + rel_path);
+                    Logger::get().info("已删除: " + rel_path);
+                    
                 }
                 else {
-                    logger.error("删除失败: " + rel_path);
+                    Logger::get().error("删除失败: " + rel_path);
+                   
                 }
             }
         }
@@ -133,7 +138,7 @@ int main() {
     #endif
    
     monitor->start();
-    logger.info("监控已启动，按 Ctrl+C 停止");
+    Logger::get().info("监控已启动，按 Ctrl+C 停止");
     std::cout << "it is stop by Ctrl+C" << std::endl;
     // 主线程等待退出信号
     while (!quit) {
@@ -142,6 +147,7 @@ int main() {
     }
 
     monitor->stop();
-    logger.info("程序正常退出");
+    Logger::get().info("程序正常退出");
+    
     return 0;
 }

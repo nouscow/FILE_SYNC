@@ -28,16 +28,25 @@
 enum LogLevel{DEBUG=0,INFO=1,ERROR=2};
 #include<mutex>
 #include<chrono>
+#include<memory>
 class Logger{
 private:
 std::string file_path; 
 LogLevel level;
 std::ofstream file_;
 std::mutex mutex_;
+static std::unique_ptr<Logger> logger;
+// 日志滚动参数
+long max_size_bytes = 10 * 1024 * 1024; // 默认 10MB
+int backup_count = 3;                    // 默认保留 3 份
+
+void rotate();                            // 检查文件大小，超限则滚动
 
 public:
   Logger( std::string file_path,LogLevel level = LogLevel::INFO);
-  void log(LogLevel level, const std::string& message);
+  static void init(const std::string& file_path, long max_size_bytes = 10*1024*1024, int backup_count = 3);
+static Logger& get();
+  void log(LogLevel lvl, const std::string& message);
    void debug(const std::string& msg);
    void info(const std::string& msg);
     void error(const std::string& msg);

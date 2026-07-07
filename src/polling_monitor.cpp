@@ -3,7 +3,7 @@
 #include<thread>
 #include<string>
 #include<iostream>
-
+#include"logger.h"
 polling_monitor::polling_monitor(int interval_secs, SyncCallback callback):Monitor(std::move(callback)){
   this->interval_secs=interval_secs;
 
@@ -16,6 +16,7 @@ void polling_monitor::start() {
 void polling_monitor::stop(){
 	running_ = false;
 	if (worker_.joinable()) {
+		Logger::get().info("成功停止线程");
 		worker_.join();
 	}
 } // 请求停止
