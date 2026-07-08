@@ -44,7 +44,7 @@ std::vector<FileInfo>Scanner::list_files(const fs::path& dir) {
 	try {
 		for (const auto& entry : fs::recursive_directory_iterator(dir)) {
 			FileInfo fi;
-			fi.file_size = fs::file_size(entry.path());
+			fi.file_size = (int)fs::file_size(entry.path());
 			fi.path =fs::relative(entry.path(),dir);
 			fi.last_change_time =fs::last_write_time(entry.path()) ;
 			file.push_back(fi);
