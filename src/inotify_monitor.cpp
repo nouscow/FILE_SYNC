@@ -59,7 +59,7 @@ void inotify_monitor::loop() {
         int pos=0;
         while(rd>pos){
             event=(struct inotify_event*)(buf+pos);
-            if(event->len>0){
+            if(event->len>0&&(IN_CREATE | IN_MODIFY | IN_DELETE | IN_MOVED_TO)){
                 if (running_ && callback) {
                     callback();
                 }
