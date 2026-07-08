@@ -61,7 +61,7 @@ FILE_SYNC/
 │   ├── syncer.cpp            sync_file() 文件复制、delete_file() 文件删除
 │   ├── monitor.cpp           Monitor 基类构造函数实现
 │   ├── polling_monitor.cpp   轮询监控：sleep + callback 循环
-│   └── inotify_monitor.cpp   inotify 监控：read() 阻塞等待事件（仅 Linux 编译）
+│   └── inotify_monitor.cpp   inotify 监控：poll() 超时轮询 + read() 读取事件（仅 Linux 编译）
 ├── thirdparty/
 │   └── nlohmann/
 │       └── json.hpp          nlohmann/json 单头文件库
@@ -100,7 +100,7 @@ Syncer 的 `sync_file()` 根据 FileInfo 的相对路径拼接出源和目标的
 ### 平台监控策略
 
 - **polling_monitor**：后台线程中 `loop()` 循环执行 `sleep_for(interval_secs)` → 检查 `running_` 标志 → 调用 callback。简单可靠，不依赖平台特有 API。
-- **inotify_monitor**：`start()` 中调用 `inotify_init()` 和 `inotify_add_watch()` 注册 `IN_ALL_EVENTS`。`loop()` 中阻塞在 `read()` 上，收到事件后解析 `inotify_event` 结构体，对有文件名的触发 callback。`stop()` 中移除 watch 并关闭 fd。整个实现用 `#ifdef __linux__` 包裹，非 Linux 平台不参与编译。
+- **inotify_monitor**：`start()` 中调用 `inotify_init()` 和 `inotify_add_watch()` 注册 `IN_ALL_EVENTS`。`loop()` 使用 `poll()` 以 500ms 超时轮询 inotify fd，收到 `POLLIN` 后 `read()` 读取事件并解析 `inotify_event` 结构体，对符合条件的文件事件触发 callback。`poll()` 超时机制确保 `stop()` 能在 500ms 内响应，避免 `read()` 永久阻塞。整个实现用 `#ifdef __linux__` 包裹，非 Linux 平台不参与编译。
 
 ## 配置说明
 

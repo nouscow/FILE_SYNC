@@ -47,7 +47,8 @@ void inotify_monitor::stop(){
     }
 }
 
-// 主循环：阻塞读取 inotify 事件，解析 inotify_event 结构体，
+// 主循环：使用 poll() 以 500ms 超时轮询 inotify fd，避免 read() 永久阻塞导致 stop() 无法响应。
+// 收到 POLLIN 事件后 read() 读取并解析 inotify_event，
 // 仅对 IN_CREATE / IN_MODIFY / IN_DELETE / IN_MOVED_TO 事件触发 callback
 void inotify_monitor::loop() {
     char buf[4096];
