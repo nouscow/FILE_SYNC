@@ -37,8 +37,8 @@ int main() {
     // TODO: CLI 命令行参数支持
     //       解析 --source、--target、--interval 等参数，覆盖 config.json 中的值
     Config cfg = load_config("config.json");
-    std::cout << "souce_dir: " << cfg.source_dir << "\ntarget_dir: " << cfg.target_dir << std::endl;
-
+   // std::cout << "souce_dir: " << cfg.source_dir << "\ntarget_dir: " << cfg.target_dir << std::endl;
+   ConfigPrintf(cfg);
     // 初始化日志单例
     Logger::init(cfg.log_file_path, cfg.log_max_size_mb * 1024L * 1024L, cfg.log_backup_count);
     Logger::get().info("文件同步工具启动");
