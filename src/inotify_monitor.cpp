@@ -46,10 +46,8 @@ void inotify_monitor::stop(){
     }
 }
 
-// 主循环：阻塞读取 inotify 事件，解析 inotify_event 结构体，有文件名则触发 callback
-// TODO: 精确过滤事件类型
-//       当前仅检查 event->len > 0，对 IN_ACCESS 等无关事件也触发回调
-//       应只关注 IN_CREATE | IN_MODIFY | IN_DELETE | IN_MOVED_TO
+// 主循环：阻塞读取 inotify 事件，解析 inotify_event 结构体，
+// 仅对 IN_CREATE / IN_MODIFY / IN_DELETE / IN_MOVED_TO 事件触发 callback
 void inotify_monitor::loop() {
     while (running_) {
         char buf[4096];
@@ -59,7 +57,7 @@ void inotify_monitor::loop() {
         int pos=0;
         while(rd>pos){
             event=(struct inotify_event*)(buf+pos);
-            if(event->len>0&&(IN_CREATE | IN_MODIFY | IN_DELETE | IN_MOVED_TO)){
+            if(event->len > 0 && (event->mask & (IN_CREATE | IN_MODIFY | IN_DELETE | IN_MOVED_TO))){
                 if (running_ && callback) {
                     callback();
                 }

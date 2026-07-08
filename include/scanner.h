@@ -36,10 +36,9 @@ struct FileInfo {
         }
     }
 
-    // TODO: 当前按 file_size 排序用于 std::set 操作，
-    //       注释标注"按文件名升序"与实际行为不一致，需修正为按 path 排序
+    // 按相对路径升序排序，用于 std::set / set_symmetric_difference 操作
     bool operator<(const FileInfo& other) const {
-        return file_size < other.file_size;
+        return this->path < other.path;
     }
 };
 

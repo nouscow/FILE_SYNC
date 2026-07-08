@@ -91,7 +91,7 @@ Monitor 使用多态：`main()` 中通过 `#ifdef __linux__` 选择创建 `inoti
 
 ### 差异检测机制
 
-Scanner 的 `scan()` 方法分别对源目录和目标目录调用 `list_files()`（基于 `std::filesystem::recursive_directory_iterator`），收集所有文件的相对路径、大小和最后修改时间。然后 `diff()` 将两组 FileInfo 放入 `std::set`，通过 `std::set_symmetric_difference` 找出只存在于一侧或两侧不同的文件。FileInfo 的 `operator<` 按 `file_size` 排序以支持 set 操作。
+Scanner 的 `scan()` 方法分别对源目录和目标目录调用 `list_files()`（基于 `std::filesystem::recursive_directory_iterator`），收集所有文件的相对路径、大小和最后修改时间。然后 `diff()` 将两组 FileInfo 放入 `std::set`，通过 `std::set_symmetric_difference` 找出只存在于一侧或两侧不同的文件。FileInfo 的 `operator<` 按 `path` 排序以支持 set 操作。
 
 ### 文件同步
 
@@ -146,8 +146,7 @@ Syncer 的 `sync_file()` 根据 FileInfo 的相对路径拼接出源和目标的
 
 - **排除规则未生效**：`exclude_patterns` 被解析到 Config 中但未在 Scanner 或 Syncer 中使用。
 - **无增量同步**：每次同步都是全量对比 + 整文件复制，不支持断点续传或差量传输。
-- **FileInfo 排序依据**：`operator<` 按 `file_size` 排序（用于 `std::set` 操作），注释标注为"按文件名升序"与实际行为不一致。
-- **目录事件误触发**：`inotify_monitor` 的 `loop()` 仅检查 `event->len > 0`（即事件是否带文件名），不区分事件类型，对目录本身的 IN_ACCESS 等无关事件也会触发同步回调。
+- **inotify 仅监听单层目录**：当前 `inotify_add_watch()` 只注册了顶层目录，子目录内的变更不会触发事件，需递归添加 watch 或改用 fanotify。
 
 ## 待做事项
 
@@ -155,7 +154,6 @@ Syncer 的 `sync_file()` 根据 FileInfo 的相对路径拼接出源和目标的
 - 实现 Syncer 重试机制（指数退避）
 - Linux 下 sendfile 零拷贝优化大文件传输
 - CLI 命令行参数支持（`--source`、`--target`、`--interval` 等）
-- inotify_monitor 精确过滤事件类型（只关注 IN_CREATE / IN_MODIFY / IN_DELETE / IN_MOVED_TO）
 
 ## 许可
 
